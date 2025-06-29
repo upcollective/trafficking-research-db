@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GAHTS - Trafficking Research Database</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'deep-blue': '#1e3a5f',
+                        'deep-blue-dark': '#152d47',
+                        'deep-blue-light': '#2d4a6b',
+                        'accent-blue': '#3b82f6',
+                        'dark-grey': '#374151',
+                        'medium-grey': '#6b7280',
+                        'light-grey': '#9ca3af',
+                        'bg-grey': '#f8fafc'
+                    }
+                }
+            }
+        }
+    </script>
+    <script src="https://unpkg.com/fuse.js@6.6.2/dist/fuse.min.js"></script>
+    <script src="data.js"></script>
+</head>
+<body class="bg-bg-grey min-h-screen">
+    <!-- Header Section -->
+    <header class="bg-deep-blue shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 py-6">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <img src="download.png" 
+                         alt="GAHTS Logo" 
+                         class="w-16 h-16 rounded-lg bg-white p-2 shadow-md">
+                    <div>
+                        <h1 class="text-3xl font-bold text-white">GAHTS</h1>
+                        <p class="text-blue-200 text-lg">Trafficking Research Database</p>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <p class="text-blue-100 text-sm">Global Alliance Against</p>
+                    <p class="text-blue-100 text-sm">Human Trafficking & Slavery</p>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="max-w-7xl mx-auto px-4 py-8">
+
+        <!-- Search Bar (Always at top) -->
+        <div class="bg-white rounded-xl shadow-lg p-6 mb-8 border border-gray-100">
+            <label for="search" class="block text-sm font-semibold text-dark-grey mb-3">
+                <svg class="inline w-5 h-5 mr-2 text-accent-blue" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                </svg>
+                Search research database
+            </label>
+            <input 
+                type="text" 
+                id="search" 
+                placeholder="Enter keywords, authors, or research topics..."
+                class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-accent-blue focus:border-accent-blue text-lg transition-all duration-200 hover:border-gray-300"
+            >
+            <p class="text-xs text-medium-grey mt-2">Search across titles, authors, abstracts, and research content</p>
+        </div>
+
+        <!-- Mobile Filter Toggle Button (visible only on mobile) -->
+        <div class="lg:hidden mb-6">
+            <button 
+                id="mobileFilterToggle"
+                class="w-full bg-white border-2 border-gray-200 rounded-xl px-4 py-4 text-left font-semibold text-dark-grey hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-accent-blue transition-all duration-200 shadow-md"
+            >
+                <div class="flex justify-between items-center">
+                    <div class="flex items-center">
+                        <svg class="w-5 h-5 mr-2 text-accent-blue" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.414A1 1 0 013 6.707V4z"></path>
+                        </svg>
+                        <span>Filter Research</span>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <span id="mobileActiveFilters" class="text-sm text-accent-blue font-medium"></span>
+                        <svg class="w-5 h-5 transform transition-transform text-medium-grey" id="mobileFilterIcon">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" stroke="currentColor" fill="none"></path>
+                        </svg>
+                    </div>
+                </div>
+            </button>
+        </div>
+
+        <!-- Main Content Area -->
+        <div class="flex flex-col lg:flex-row gap-8">
+            <!-- Sidebar Filters (Desktop) / Collapsible Filters (Mobile) -->
+            <div class="lg:w-80 flex-shrink-0">
+                <div id="filterPanel" class="bg-white rounded-xl shadow-lg p-6 lg:sticky lg:top-4 hidden lg:block border border-gray-100">
+                    <div class="flex justify-between items-center mb-6 pb-4 border-b border-gray-100">
+                        <h3 class="text-lg font-bold text-deep-blue flex items-center">
+                            <svg class="w-5 h-5 mr-2 text-accent-blue" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.414A1 1 0 013 6.707V4z"></path>
+                            </svg>
+                            Research Filters
+                        </h3>
+                        <div id="activeFilters" class="text-sm text-accent-blue font-medium"></div>
+                    </div>
+                    
+                    <div class="space-y-5">
+                        <!-- Geographic Focus -->
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <label for="geographicFilter" class="block text-sm font-semibold text-deep-blue mb-3 flex items-center">
+                                <svg class="w-4 h-4 mr-2 text-accent-blue" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                Geographic Focus
+                            </label>
+                            <select 
+                                id="geographicFilter" 
+                                class="w-full px-3 py-2 border-2 border-gray-200 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-accent-blue focus:border-accent-blue transition-all duration-200 bg-white font-medium text-dark-grey"
+                            >
+                                <option value="">All Regions</option>
+                                <option value="south-asia">South Asia</option>
+                                <option value="southeast-asia">Southeast Asia</option>
+                                <option value="east-asia">East Asia</option>
+                                <option value="sub-saharan-africa">Sub-Saharan Africa</option>
+                                <option value="eastern-europe">Eastern Europe</option>
+                                <option value="western-europe">Western Europe</option>
+                                <option value="north-america">North America</option>
+                                <option value="latin-america">Latin America & Caribbean</option>
+                                <option value="middle-east">Middle East & North Africa</option>
+                                <option value="global">Global/Multi-Regional</option>
+                            </select>
+                        </div>
+
+                        <!-- Trafficking Type -->
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <label for="traffickingTypeFilter" class="block text-sm font-semibold text-deep-blue mb-3 flex items-center">
+                                <svg class="w-4 h-4 mr-2 text-accent-blue" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                Trafficking Type
+                            </label>
+                            <select 
+                                id="traffickingTypeFilter" 
+                                class="w-full px-3 py-2 border-2 border-gray-200 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-accent-blue focus:border-accent-blue transition-all duration-200 bg-white font-medium text-dark-grey"
+                            >
+                                <option value="">All Types</option>
+                                <option value="sex-trafficking">Sex Trafficking</option>
+                                <option value="labor-trafficking">Labor Trafficking</option>
+                                <option value="domestic-servitude">Domestic Servitude</option>
+                                <option value="child-trafficking">Child Trafficking</option>
+                                <option value="forced-marriage">Forced Marriage</option>
+                                <option value="organ-trafficking">Organ Trafficking</option>
+                                <option value="mixed-forms">Mixed/Multiple Forms</option>
+                                <option value="modern-slavery">Modern Slavery (General)</option>
+                            </select>
+                        </div>
+
+                        <!-- Target Population -->
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <label for="populationFilter" class="block text-sm font-semibold text-deep-blue mb-3 flex items-center">
+                                <svg class="w-4 h-4 mr-2 text-accent-blue" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                                </svg>
+                                Target Population
+                            </label>
+                            <select 
+                                id="populationFilter" 
+                                class="w-full px-3 py-2 border-2 border-gray-200 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-accent-blue focus:border-accent-blue transition-all duration-200 bg-white font-medium text-dark-grey"
+                            >
+                                <option value="">All Populations</option>
+                                <option value="children">Children & Minors</option>
+                                <option value="women">Women & Girls</option>
+                                <option value="men">Men & Boys</option>
+                                <option value="migrants">Migrant Workers</option>
+                                <option value="refugees">Refugees & Displaced</option>
+                                <option value="indigenous">Indigenous Communities</option>
+                                <option value="lgbtq">LGBTQ+ Individuals</option>
+                                <option value="mixed-demographics">Mixed Demographics</option>
+                            </select>
+                        </div>
+
+                        <!-- Research Approach -->
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <label for="methodFilter" class="block text-sm font-semibold text-deep-blue mb-3 flex items-center">
+                                <svg class="w-4 h-4 mr-2 text-accent-blue" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v6a2 2 0 002 2h6a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                                </svg>
+                                Research Approach
+                            </label>
+                            <select 
+                                id="methodFilter" 
+                                class="w-full px-3 py-2 border-2 border-gray-200 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-accent-blue focus:border-accent-blue transition-all duration-200 bg-white font-medium text-dark-grey"
+                            >
+                                <option value="">All Methods</option>
+                                <option value="qualitative">Qualitative Research</option>
+                                <option value="quantitative">Quantitative Research</option>
+                                <option value="mixed-methods">Mixed Methods</option>
+                                <option value="literature-review">Literature Reviews</option>
+                                <option value="policy-analysis">Policy Analysis</option>
+                                <option value="participatory">Participatory Research</option>
+                                <option value="program-evaluation">Program Evaluation</option>
+                            </select>
+                        </div>
+
+                        <!-- Intervention Focus -->
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <label for="interventionFilter" class="block text-sm font-semibold text-deep-blue mb-3 flex items-center">
+                                <svg class="w-4 h-4 mr-2 text-accent-blue" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+                                </svg>
+                                Intervention Focus
+                            </label>
+                            <select 
+                                id="interventionFilter" 
+                                class="w-full px-3 py-2 border-2 border-gray-200 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-accent-blue focus:border-accent-blue transition-all duration-200 bg-white font-medium text-dark-grey"
+                            >
+                                <option value="">All Interventions</option>
+                                <option value="prevention">Prevention</option>
+                                <option value="protection">Protection</option>
+                                <option value="prosecution">Prosecution</option>
+                                <option value="partnership">Partnership</option>
+                                <option value="policy-legal">Policy & Legal</option>
+                                <option value="healthcare">Healthcare</option>
+                                <option value="mental-health">Mental Health</option>
+                                <option value="reintegration">Reintegration</option>
+                            </select>
+                        </div>
+
+                        <!-- Publication Year -->
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <label for="yearFilter" class="block text-sm font-semibold text-deep-blue mb-3 flex items-center">
+                                <svg class="w-4 h-4 mr-2 text-accent-blue" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                </svg>
+                                Publication Year
+                            </label>
+                            <select 
+                                id="yearFilter" 
+                                class="w-full px-3 py-2 border-2 border-gray-200 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-accent-blue focus:border-accent-blue transition-all duration-200 bg-white font-medium text-dark-grey"
+                            >
+                                <option value="">All Years</option>
+                            </select>
+                        </div>
+
+                        <!-- Clear Filters Button -->
+                        <div class="pt-6 border-t border-gray-200">
+                            <button 
+                                id="clearFilters"
+                                class="w-full px-4 py-3 text-sm font-semibold text-deep-blue bg-gray-100 hover:bg-accent-blue hover:text-white rounded-lg transition-all duration-200 border-2 border-gray-200 hover:border-accent-blue flex items-center justify-center"
+                            >
+                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                                </svg>
+                                Clear All Filters
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results Area -->
+            <div class="flex-1 min-w-0">
+                <!-- Results Header -->
+                <div class="bg-white rounded-xl shadow-lg p-4 mb-6 border border-gray-100">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <svg class="w-5 h-5 mr-2 text-accent-blue" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"></path>
+                            </svg>
+                            <p id="resultsCount" class="text-sm font-semibold text-deep-blue"></p>
+                        </div>
+                        <div class="text-xs text-medium-grey">
+                            Academic Research Papers
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Results Grid -->
+                <div id="results" class="grid gap-6"></div>
+            </div>
+        </div>
+        
+        <!-- Loading State -->
+        <div id="loading" class="text-center py-16">
+            <div class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-gray-200 border-t-accent-blue shadow-lg"></div>
+            <p class="mt-4 text-lg font-medium text-deep-blue">Loading GAHTS Research Database</p>
+            <p class="text-sm text-medium-grey">Preparing 1,058 trafficking research resources...</p>
+        </div>
+    </div>
+
+    <script>
+        let allData = [];
+        let filteredData = [];
+        let fuse;
+        let currentFilters = {};
+
+        // Initialize the application
+        async function init() {
+            try {
+                await loadData();
+                categorizeData();
+                setupSearch();
+                setupFilters();
+                displayResults(allData);
+                document.getElementById('loading').style.display = 'none';
+            } catch (error) {
+                console.error('Failed to initialize app:', error);
+                document.getElementById('loading').innerHTML = 
+                    `<div class="text-center py-16">
+                        <div class="text-red-600 mb-4">
+                            <svg class="w-12 h-12 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            <p class="text-lg font-medium">Failed to load research database</p>
+                            <p class="text-sm mt-2">${error.message}</p>
+                        </div>
+                        <button onclick="location.reload()" class="px-4 py-2 bg-accent-blue text-white rounded-lg hover:bg-deep-blue transition-colors">
+                            Try Again
+                        </button>
+                    </div>`;
+            }
+        }
+
+        // Load data from Google Sheets
+        async function loadData() {
+            const SHEET_ID = '1ZybnTPBM83Ey6qObaDcEYB4QMlXfs1XOhSjBbLbIZUg';
+            const API_KEY = 'AIzaSyDG7wgGYHTvhp-lRroqEvA8mjAJPrZYrRo';
+            const RANGE = 'Sheet1!A:G';
+            
+            try {
+                const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${RANGE}?key=${API_KEY}`;
+                const response = await fetch(url);
+                
+                if (!response.ok) {
+                    throw new Error(`Google Sheets API error: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                if (!data.values || data.values.length === 0) {
+                    throw new Error('No data found in Google Sheet');
+                }
+                
+                // Convert Google Sheets data to our format
+                const [headers, ...rows] = data.values;
+                
+                allData = rows.map(row => ({
+                    Title: row[0] || '',
+                    Authors: row[1] || '',
+                    Year: row[2] && row[2] !== '#NUM!' ? row[2] : null,
+                    Tags: row[3] || '',
+                    Abstract: row[4] || '',
+                    URL: row[5] || '',
+                    ZoteroKey: row[6] || ''
+                })).filter(item => item.Title && item.Title.trim());
+                
+                filteredData = [...allData];
+                
+                console.log(`Loaded ${allData.length} research papers from Google Sheets`);
+                
+            } catch (error) {
+                console.error('Failed to load data from Google Sheets:', error);
+                
+                // Fallback to local data file if Google Sheets fails
+                console.log('Attempting to load from local data file...');
+                try {
+                    await loadLocalData();
+                } catch (localError) {
+                    throw new Error('Failed to load data from both Google Sheets and local file');
+                }
+            }
+        }
+
+        // Fallback function to load local data
+        async function loadLocalData() {
+            // Check if we have local data.js as fallback
+            if (window.researchData) {
+                allData = window.researchData.filter(row => row.Title && row.Title.trim());
+                filteredData = [...allData];
+                console.log(`Loaded ${allData.length} research papers from local data file`);
+            } else {
+                throw new Error('No local data available');
+            }
+        }
+
+        // Smart categorization based on content analysis
+        function categorizeData() {
+            allData.forEach(item => {
+                const text = `${item.Title || ''} ${item.Abstract || ''} ${item.Authors || ''}`.toLowerCase();
+                
+                // Geographic categorization
+                item.geographic = categorizeGeographic(text);
+                
+                // Trafficking type categorization
+                item.traffickingType = categorizeTraffickingType(text);
+                
+                // Population categorization
+                item.population = categorizePopulation(text);
+                
+                // Method categorization
+                item.method = categorizeMethod(text);
+                
+                // Intervention categorization
+                item.intervention = categorizeIntervention(text);
+            });
+        }
+
+        // Geographic categorization logic
+        function categorizeGeographic(text) {
+            const regions = {
+                'south-asia': ['india', 'nepal', 'bangladesh', 'sri lanka', 'pakistan', 'bhutan', 'maldives'],
+                'southeast-asia': ['thailand', 'cambodia', 'vietnam', 'philippines', 'myanmar', 'indonesia', 'malaysia', 'singapore', 'laos', 'brunei'],
+                'east-asia': ['china', 'south korea', 'japan', 'taiwan', 'mongolia', 'north korea'],
+                'sub-saharan-africa': ['nigeria', 'ghana', 'ethiopia', 'kenya', 'south africa', 'uganda', 'tanzania', 'zambia', 'zimbabwe', 'botswana', 'malawi', 'rwanda'],
+                'eastern-europe': ['ukraine', 'moldova', 'romania', 'bulgaria', 'russia', 'belarus', 'poland', 'hungary', 'czech', 'slovakia'],
+                'western-europe': ['sweden', 'united kingdom', 'netherlands', 'germany', 'france', 'italy', 'spain', 'belgium', 'norway', 'denmark'],
+                'north-america': ['united states', 'canada', 'mexico'],
+                'latin-america': ['guatemala', 'colombia', 'peru', 'brazil', 'argentina', 'chile', 'venezuela', 'ecuador', 'bolivia', 'uruguay'],
+                'middle-east': ['turkey', 'lebanon', 'egypt', 'jordan', 'syria', 'iraq', 'iran', 'israel'],
+                'global': ['global', 'international', 'worldwide', 'cross-border', 'transnational', 'multi-country']
+            };
+            
+            for (const [region, countries] of Object.entries(regions)) {
+                if (countries.some(country => text.includes(country))) {
+                    return region;
+                }
+            }
+            return null;
+        }
+
+        // Trafficking type categorization logic
+        function categorizeTraffickingType(text) {
+            const types = {
+                'sex-trafficking': ['sex trafficking', 'sexual exploitation', 'prostitution', 'sex trade', 'commercial sex'],
+                'labor-trafficking': ['labor trafficking', 'forced labor', 'bonded labor', 'labor exploitation', 'forced work'],
+                'domestic-servitude': ['domestic servitude', 'domestic work', 'household', 'domestic labor'],
+                'child-trafficking': ['child trafficking', 'child labor', 'child exploitation', 'minors', 'adolescent'],
+                'forced-marriage': ['forced marriage', 'marriage trafficking', 'bride trafficking'],
+                'organ-trafficking': ['organ trafficking', 'organ trade', 'organ harvesting'],
+                'modern-slavery': ['modern slavery', 'slavery', 'human bondage', 'contemporary slavery']
+            };
+            
+            for (const [type, keywords] of Object.entries(types)) {
+                if (keywords.some(keyword => text.includes(keyword))) {
+                    return type;
+                }
+            }
+            return null;
+        }
+
+        // Population categorization logic
+        function categorizePopulation(text) {
+            const populations = {
+                'children': ['children', 'child', 'minors', 'adolescent', 'youth', 'teenage'],
+                'women': ['women', 'girls', 'female', 'woman'],
+                'men': ['men', 'boys', 'male', 'man'],
+                'migrants': ['migrant', 'migration', 'immigrant', 'foreign worker'],
+                'refugees': ['refugee', 'displaced', 'asylum', 'humanitarian'],
+                'indigenous': ['indigenous', 'tribal', 'native', 'ethnic minority']
+            };
+            
+            for (const [pop, keywords] of Object.entries(populations)) {
+                if (keywords.some(keyword => text.includes(keyword))) {
+                    return pop;
+                }
+            }
+            return null;
+        }
+
+        // Method categorization logic
+        function categorizeMethod(text) {
+            const methods = {
+                'qualitative': ['qualitative', 'interview', 'ethnography', 'case study', 'focus group'],
+                'quantitative': ['quantitative', 'survey', 'statistical', 'epidemiology', 'prevalence'],
+                'mixed-methods': ['mixed method', 'mixed-method', 'combined approach'],
+                'literature-review': ['scoping review', 'systematic review', 'literature review', 'meta-analysis'],
+                'policy-analysis': ['policy analysis', 'legal analysis', 'framework analysis'],
+                'participatory': ['participatory', 'survivor-led', 'community-based']
+            };
+            
+            for (const [method, keywords] of Object.entries(methods)) {
+                if (keywords.some(keyword => text.includes(keyword))) {
+                    return method;
+                }
+            }
+            return null;
+        }
+
+        // Intervention categorization logic
+        function categorizeIntervention(text) {
+            const interventions = {
+                'prevention': ['prevention', 'awareness', 'education', 'risk reduction'],
+                'protection': ['protection', 'victim services', 'support', 'rehabilitation', 'shelter'],
+                'prosecution': ['prosecution', 'law enforcement', 'criminal justice', 'investigation'],
+                'policy-legal': ['policy', 'legal', 'legislation', 'regulation', 'law'],
+                'healthcare': ['healthcare', 'medical', 'health services', 'health system'],
+                'mental-health': ['mental health', 'trauma', 'psychology', 'psychosocial', 'ptsd'],
+                'reintegration': ['reintegration', 'aftercare', 'recovery', 'social integration']
+            };
+            
+            for (const [intervention, keywords] of Object.entries(interventions)) {
+                if (keywords.some(keyword => text.includes(keyword))) {
+                    return intervention;
+                }
+            }
+            return null;
+        }
+
+        // Setup search functionality
+        function setupSearch() {
+            const options = {
+                keys: ['Title', 'Authors', 'Abstract'],
+                threshold: 0.3,
+                includeScore: true
+            };
+            fuse = new Fuse(allData, options);
+
+            const searchInput = document.getElementById('search');
+            searchInput.addEventListener('input', debounce(handleSearch, 300));
+        }
+
+        // Setup filters
+        function setupFilters() {
+            setupYearFilter();
+            setupFilterListeners();
+            setupClearFilters();
+            setupMobileFilterToggle();
+        }
+
+        // Setup year filter
+        function setupYearFilter() {
+            const years = [...new Set(allData.map(item => item.Year).filter(year => year && year !== null))]
+                .sort((a, b) => b - a);
+            
+            const yearSelect = document.getElementById('yearFilter');
+            years.forEach(year => {
+                const option = document.createElement('option');
+                option.value = year;
+                option.textContent = year;
+                yearSelect.appendChild(option);
+            });
+        }
+
+        // Setup filter event listeners
+        function setupFilterListeners() {
+            const filterIds = ['geographicFilter', 'traffickingTypeFilter', 'populationFilter', 'methodFilter', 'interventionFilter', 'yearFilter'];
+            
+            filterIds.forEach(filterId => {
+                const element = document.getElementById(filterId);
+                if (element) {
+                    element.addEventListener('change', applyFilters);
+                }
+            });
+        }
+
+        // Setup clear filters functionality
+        function setupClearFilters() {
+            document.getElementById('clearFilters').addEventListener('click', () => {
+                // Reset all filter dropdowns
+                document.getElementById('geographicFilter').value = '';
+                document.getElementById('traffickingTypeFilter').value = '';
+                document.getElementById('populationFilter').value = '';
+                document.getElementById('methodFilter').value = '';
+                document.getElementById('interventionFilter').value = '';
+                document.getElementById('yearFilter').value = '';
+                document.getElementById('search').value = '';
+                
+                currentFilters = {};
+                filteredData = [...allData];
+                displayResults(allData);
+                updateActiveFilters();
+            });
+        }
+
+        // Setup mobile filter toggle
+        function setupMobileFilterToggle() {
+            const toggleButton = document.getElementById('mobileFilterToggle');
+            const filterPanel = document.getElementById('filterPanel');
+            const filterIcon = document.getElementById('mobileFilterIcon');
+            let isOpen = false;
+
+            toggleButton.addEventListener('click', () => {
+                isOpen = !isOpen;
+                
+                if (isOpen) {
+                    filterPanel.classList.remove('hidden');
+                    filterPanel.classList.add('block', 'lg:block');
+                    filterIcon.style.transform = 'rotate(180deg)';
+                } else {
+                    filterPanel.classList.add('hidden');
+                    filterPanel.classList.remove('block');
+                    filterIcon.style.transform = 'rotate(0deg)';
+                }
+            });
+        }
+
+        // Handle search
+        function handleSearch() {
+            const query = document.getElementById('search').value.trim();
+            
+            if (query) {
+                const results = fuse.search(query);
+                filteredData = results.map(result => result.item);
+            } else {
+                filteredData = [...allData];
+            }
+            
+            applyFilters();
+        }
+
+        // Apply all filters
+        function applyFilters() {
+            let filtered = document.getElementById('search').value.trim() ? filteredData : [...allData];
+            
+            // Apply geographic filter
+            const geographic = document.getElementById('geographicFilter').value;
+            if (geographic) {
+                filtered = filtered.filter(item => item.geographic === geographic);
+                currentFilters.geographic = geographic;
+            } else {
+                delete currentFilters.geographic;
+            }
+            
+            // Apply trafficking type filter
+            const traffickingType = document.getElementById('traffickingTypeFilter').value;
+            if (traffickingType) {
+                filtered = filtered.filter(item => item.traffickingType === traffickingType);
+                currentFilters.traffickingType = traffickingType;
+            } else {
+                delete currentFilters.traffickingType;
+            }
+            
+            // Apply population filter
+            const population = document.getElementById('populationFilter').value;
+            if (population) {
+                filtered = filtered.filter(item => item.population === population);
+                currentFilters.population = population;
+            } else {
+                delete currentFilters.population;
+            }
+            
+            // Apply method filter
+            const method = document.getElementById('methodFilter').value;
+            if (method) {
+                filtered = filtered.filter(item => item.method === method);
+                currentFilters.method = method;
+            } else {
+                delete currentFilters.method;
+            }
+            
+            // Apply intervention filter
+            const intervention = document.getElementById('interventionFilter').value;
+            if (intervention) {
+                filtered = filtered.filter(item => item.intervention === intervention);
+                currentFilters.intervention = intervention;
+            } else {
+                delete currentFilters.intervention;
+            }
+            
+            // Apply year filter
+            const selectedYear = document.getElementById('yearFilter').value;
+            if (selectedYear) {
+                filtered = filtered.filter(item => item.Year == selectedYear);
+                currentFilters.year = selectedYear;
+            } else {
+                delete currentFilters.year;
+            }
+            
+            displayResults(filtered);
+            updateActiveFilters();
+        }
+
+        // Update active filters display
+        function updateActiveFilters() {
+            const activeCount = Object.keys(currentFilters).length;
+            const activeFiltersDiv = document.getElementById('activeFilters');
+            const mobileActiveFiltersDiv = document.getElementById('mobileActiveFilters');
+            
+            const filterText = activeCount > 0 ? `${activeCount} filter${activeCount > 1 ? 's' : ''} active` : '';
+            
+            if (activeFiltersDiv) {
+                activeFiltersDiv.textContent = filterText;
+            }
+            if (mobileActiveFiltersDiv) {
+                mobileActiveFiltersDiv.textContent = filterText;
+            }
+        }
+
+        // Display results
+        function displayResults(data) {
+            const resultsContainer = document.getElementById('results');
+            const resultsCount = document.getElementById('resultsCount');
+            
+            resultsCount.textContent = `Showing ${data.length} of ${allData.length} resources`;
+            
+            if (data.length === 0) {
+                resultsContainer.innerHTML = 
+                    '<div class="text-center py-12 text-gray-500">No results found. Try different search terms or filters.</div>';
+                return;
+            }
+            
+            resultsContainer.innerHTML = data.map(item => `
+                <div class="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 border border-gray-100 hover:border-accent-blue group">
+                    <div class="flex items-start justify-between mb-4">
+                        <div class="flex-1">
+                            <h3 class="text-lg font-bold text-deep-blue mb-2 leading-tight group-hover:text-accent-blue transition-colors duration-200">${escapeHtml(item.Title)}</h3>
+                            <div class="flex flex-wrap gap-4 text-sm text-medium-grey mb-3">
+                                ${item.Authors ? `
+                                    <div class="flex items-center">
+                                        <svg class="w-4 h-4 mr-1 text-accent-blue" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                                        </svg>
+                                        <span class="font-medium">${escapeHtml(item.Authors)}</span>
+                                    </div>
+                                ` : ''}
+                                ${item.Year && item.Year !== null ? `
+                                    <div class="flex items-center">
+                                        <svg class="w-4 h-4 mr-1 text-accent-blue" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                        </svg>
+                                        <span class="font-medium">${item.Year}</span>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                        ${item.URL ? `
+                            <a href="${item.URL}" target="_blank" class="ml-4 flex-shrink-0 p-2 bg-accent-blue text-white rounded-lg hover:bg-deep-blue transition-colors duration-200 shadow-md hover:shadow-lg">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                                </svg>
+                            </a>
+                        ` : ''}
+                    </div>
+                    
+                    ${item.Abstract ? `
+                        <div class="mb-4">
+                            <p class="text-sm text-dark-grey leading-relaxed">${escapeHtml(item.Abstract).substring(0, 300)}${item.Abstract.length > 300 ? '...' : ''}</p>
+                        </div>
+                    ` : ''}
+                    
+                    <div class="flex items-center justify-between pt-4 border-t border-gray-100">
+                        <div class="flex flex-wrap gap-2">
+                            ${item.geographic ? `<span class="px-2 py-1 bg-blue-100 text-accent-blue text-xs font-medium rounded-full">${item.geographic.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}</span>` : ''}
+                            ${item.traffickingType ? `<span class="px-2 py-1 bg-gray-100 text-deep-blue text-xs font-medium rounded-full">${item.traffickingType.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}</span>` : ''}
+                            ${item.population ? `<span class="px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">${item.population.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}</span>` : ''}
+                        </div>
+                        ${item.URL ? `
+                            <a href="${item.URL}" target="_blank" class="text-accent-blue hover:text-deep-blue text-sm font-semibold transition-colors duration-200 flex items-center">
+                                View Paper
+                                <svg class="ml-1 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                                </svg>
+                            </a>
+                        ` : ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Utility functions
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        function escapeHtml(text) {
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;'
+            };
+            return text.replace(/[&<>"']/g, m => map[m]);
+        }
+
+        // Initialize the app when page loads
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
