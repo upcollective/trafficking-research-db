@@ -1,6 +1,6 @@
 # GAHTS Trafficking Research Database
 
-A searchable web application for trafficking research resources maintained by the Global Alliance Against Human Trafficking & Slavery (GAHTS).
+A searchable web application for trafficking research resources maintained by the Global Association of Human Trafficking Scholars (GAHTS).
 
 ## Features
 
@@ -42,4 +42,4 @@ This project is maintained by GAHTS. For questions or suggestions, please contac
 
 ## License
 
-© 2024 Global Alliance Against Human Trafficking & Slavery (GAHTS). All rights reserved.
+© 2024 Global Association of Human Trafficking Scholars (GAHTS). All rights reserved.
